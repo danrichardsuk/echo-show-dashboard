@@ -78,6 +78,7 @@
       align-items: flex-end;
       text-align: right;
       min-width: 0;
+      padding-right: 4px;
     }
     .weather-main {
       display: flex;
@@ -86,30 +87,39 @@
       gap: 15px;
     }
     .weather-icon {
-      font-size: clamp(58px, 7vw, 86px);
+      font-size: clamp(64px, 7.6vw, 94px);
       line-height: 1;
       filter: drop-shadow(0 3px 8px rgba(0,0,0,.18));
     }
     .temp {
-      font-size: clamp(70px, 9vw, 116px);
+      font-size: clamp(78px, 9.8vw, 126px);
       line-height: .9;
       font-weight: 700;
       letter-spacing: -5px;
       font-variant-numeric: tabular-nums;
     }
     .condition {
-      margin-top: 14px;
-      font-size: clamp(22px, 2.6vw, 32px);
+      margin-top: 10px;
+      font-size: clamp(24px, 2.8vw, 35px);
       font-weight: 600;
     }
     .details {
-      margin-top: 12px;
+      margin-top: 10px;
       display: flex;
-      gap: 20px;
+      gap: 18px;
       justify-content: flex-end;
       flex-wrap: wrap;
       color: var(--muted);
       font-size: clamp(16px, 1.7vw, 22px);
+    }
+    .extras {
+      margin-top: 10px;
+      display: flex;
+      gap: 16px;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: clamp(14px, 1.45vw, 18px);
     }
     .forecast {
       grid-column: 1 / -1;
@@ -150,14 +160,6 @@
       color: var(--muted);
       white-space: nowrap;
     }
-    .status {
-      position: fixed;
-      right: 14px;
-      bottom: 8px;
-      font-size: 11px;
-      color: rgba(255,255,255,.38);
-      z-index: 5;
-    }
     #awakePrompt {
       position: fixed;
       inset: 0;
@@ -197,6 +199,7 @@
     body.compact .temp { font-size: clamp(62px, 8vw, 96px); }
     body.compact .condition { margin-top: 8px; font-size: clamp(19px, 2.2vw, 27px); }
     body.compact .details { margin-top: 7px; gap: 14px; font-size: clamp(14px, 1.5vw, 19px); }
+    body.compact .extras { margin-top: 6px; gap: 12px; font-size: clamp(12px, 1.25vw, 16px); }
     body.compact .hour { padding: 8px 8px 7px; border-radius: 14px; }
     body.compact .hour-time { font-size: 16px; }
     body.compact .hour-icon { font-size: 26px; margin: 2px 0 1px; }
@@ -227,13 +230,17 @@
         <span id="highlow">H --° · L --°</span>
         <span id="wind">Wind -- mph</span>
       </div>
+      <div class="extras">
+        <span id="sunrise">☀︎ --:--</span>
+        <span id="sunset">☾ --:--</span>
+        <span id="tomorrow">Tomorrow --° / --°</span>
+      </div>
       <div id="weatherError" class="error"></div>
     </section>
 
     <section id="forecast" class="forecast"></section>
   </main>
 
-  <div id="status" class="status"></div>
 
   <div id="awakePrompt" role="button" aria-label="Tap to keep dashboard awake">
     <div class="box">
@@ -345,6 +352,16 @@
       return o.year + '-' + o.month + '-' + o.day + 'T' + o.hour + ':00';
     }
 
+    function shortTime(iso) {
+      try {
+        return new Intl.DateTimeFormat('en-GB', {
+          hour:'2-digit', minute:'2-digit', hour12:false, timeZone:TZ
+        }).format(new Date(iso));
+      } catch(e) {
+        return '--:--';
+      }
+    }
+
     function setDayNight(sunrise, sunset) {
       try {
         var now = new Date();
@@ -394,7 +411,7 @@
         '&longitude=' + LON +
         '&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m' +
         '&hourly=temperature_2m,precipitation_probability,weather_code' +
-        '&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset' +
+        '&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset,weather_code' +
         '&temperature_unit=celsius&wind_speed_unit=mph' +
         '&timezone=' + encodeURIComponent(TZ) +
         '&forecast_days=2';
@@ -415,18 +432,24 @@
           document.getElementById('highlow').textContent =
             'H ' + round(data.daily.temperature_2m_max[0]) + '° · L ' +
             round(data.daily.temperature_2m_min[0]) + '°';
+          document.getElementById('sunrise').textContent =
+            '☀︎ ' + shortTime(data.daily.sunrise[0]);
+          document.getElementById('sunset').textContent =
+            '☾ ' + shortTime(data.daily.sunset[0]);
+
+          var tomorrowInfo = weatherInfo(data.daily.weather_code[1]);
+          document.getElementById('tomorrow').textContent =
+            'Tomorrow ' + tomorrowInfo[0] + ' ' +
+            round(data.daily.temperature_2m_max[1]) + '° / ' +
+            round(data.daily.temperature_2m_min[1]) + '°';
+
           document.getElementById('weatherError').textContent = '';
           renderForecast(data);
           setDayNight(data.daily.sunrise[0], data.daily.sunset[0]);
-          document.getElementById('status').textContent =
-            'Weather updated ' + new Intl.DateTimeFormat('en-GB', {
-              hour:'2-digit', minute:'2-digit', hour12:false, timeZone:TZ
-            }).format(new Date());
         })
         .catch(function(err) {
           document.getElementById('weatherError').textContent =
             'Weather temporarily unavailable';
-          document.getElementById('status').textContent = String(err.message || err);
         });
     }
 
