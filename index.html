@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#10131a">
+  <title>Dan's Echo Dashboard</title>
+  <style>
+    :root {
+      --bg1: #10131a;
+      --bg2: #1d2430;
+      --panel: rgba(255,255,255,.09);
+      --line: rgba(255,255,255,.15);
+      --text: #f7f8fb;
+      --muted: #c7ccd6;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--bg1);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    body.day {
+      --bg1: #273547;
+      --bg2: #596c7f;
+      --panel: rgba(0,0,0,.17);
+      --line: rgba(255,255,255,.20);
+      --text: #ffffff;
+      --muted: #e7ebef;
+    }
+    #app {
+      width: 100vw;
+      height: 100vh;
+      min-height: 100%;
+      padding: 28px 38px 24px;
+      display: grid;
+      grid-template-columns: 1.18fr .82fr;
+      grid-template-rows: 1fr 190px;
+      gap: 20px 28px;
+      background:
+        radial-gradient(circle at 80% 12%, rgba(255,255,255,.07), transparent 28%),
+        linear-gradient(145deg, var(--bg2), var(--bg1) 62%);
+    }
+    .left {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 0;
+    }
+    .time {
+      font-size: clamp(84px, 12vw, 156px);
+      line-height: .88;
+      font-weight: 700;
+      letter-spacing: -6px;
+      font-variant-numeric: tabular-nums;
+      text-shadow: 0 3px 18px rgba(0,0,0,.22);
+    }
+    .date {
+      margin-top: 20px;
+      font-size: clamp(25px, 3vw, 38px);
+      font-weight: 600;
+      color: var(--muted);
+    }
+    .location {
+      margin-top: 12px;
+      font-size: clamp(18px, 2.1vw, 26px);
+      color: var(--muted);
+    }
+    .weather {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-end;
+      text-align: right;
+      min-width: 0;
+    }
+    .weather-main {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 15px;
+    }
+    .weather-icon {
+      font-size: clamp(58px, 7vw, 86px);
+      line-height: 1;
+      filter: drop-shadow(0 3px 8px rgba(0,0,0,.18));
+    }
+    .temp {
+      font-size: clamp(70px, 9vw, 116px);
+      line-height: .9;
+      font-weight: 700;
+      letter-spacing: -5px;
+      font-variant-numeric: tabular-nums;
+    }
+    .condition {
+      margin-top: 14px;
+      font-size: clamp(22px, 2.6vw, 32px);
+      font-weight: 600;
+    }
+    .details {
+      margin-top: 12px;
+      display: flex;
+      gap: 20px;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: clamp(16px, 1.7vw, 22px);
+    }
+    .forecast {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+      align-items: stretch;
+    }
+    .hour {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--panel);
+      padding: 13px 10px 11px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      backdrop-filter: blur(4px);
+      min-width: 0;
+    }
+    .hour-time {
+      font-size: 18px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .hour-icon {
+      font-size: 31px;
+      line-height: 1;
+      margin: 5px 0 2px;
+    }
+    .hour-temp {
+      font-size: 23px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .rain {
+      font-size: 15px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .status {
+      position: fixed;
+      right: 14px;
+      bottom: 8px;
+      font-size: 11px;
+      color: rgba(255,255,255,.38);
+      z-index: 5;
+    }
+    #awakePrompt {
+      position: fixed;
+      inset: 0;
+      display: none;
+      place-items: center;
+      background: rgba(0,0,0,.72);
+      z-index: 20;
+      cursor: pointer;
+    }
+    #awakePrompt .box {
+      max-width: 560px;
+      margin: 30px;
+      padding: 28px 34px;
+      border-radius: 22px;
+      background: #171b22;
+      border: 1px solid rgba(255,255,255,.22);
+      text-align: center;
+      box-shadow: 0 14px 50px rgba(0,0,0,.35);
+    }
+    #awakePrompt .big { font-size: 30px; font-weight: 700; }
+    #awakePrompt .small { margin-top: 10px; font-size: 18px; color: #d4d8df; line-height: 1.4; }
+    .error {
+      font-size: 19px;
+      color: var(--muted);
+      max-width: 420px;
+    }
+    @media (max-height: 600px) {
+      #app { padding-top: 18px; padding-bottom: 16px; grid-template-rows: 1fr 155px; }
+      .date { margin-top: 12px; }
+      .location { margin-top: 7px; }
+      .hour { padding-top: 9px; padding-bottom: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <main id="app">
+    <section class="left">
+      <div id="time" class="time">--:--</div>
+      <div id="date" class="date">Loading…</div>
+      <div class="location">Hebburn</div>
+    </section>
+
+    <section class="weather">
+      <div class="weather-main">
+        <div id="weatherIcon" class="weather-icon">◌</div>
+        <div id="temp" class="temp">--°</div>
+      </div>
+      <div id="condition" class="condition">Loading weather…</div>
+      <div class="details">
+        <span id="feels">Feels --°</span>
+        <span id="highlow">H --° · L --°</span>
+        <span id="wind">Wind -- mph</span>
+      </div>
+      <div id="weatherError" class="error"></div>
+    </section>
+
+    <section id="forecast" class="forecast"></section>
+  </main>
+
+  <div id="status" class="status"></div>
+
+  <div id="awakePrompt" role="button" aria-label="Tap to keep dashboard awake">
+    <div class="box">
+      <div class="big">Tap once to keep this screen awake</div>
+      <div class="small">Silk has blocked automatic media playback. One tap should let MyPage keep this dashboard open.</div>
+    </div>
+  </div>
+
+  <audio id="keepAlive" loop playsinline preload="auto"></audio>
+
+  <script>
+    // Approximate centre of Hebburn, used only for local weather.
+    var LAT = 54.9733;
+    var LON = -1.5155;
+    var TZ = 'Europe/London';
+
+    var weatherMap = {
+      0:['☀️','Clear'],
+      1:['🌤️','Mostly clear'],
+      2:['⛅','Partly cloudy'],
+      3:['☁️','Overcast'],
+      45:['🌫️','Fog'],
+      48:['🌫️','Fog'],
+      51:['🌦️','Light drizzle'],
+      53:['🌦️','Drizzle'],
+      55:['🌧️','Heavy drizzle'],
+      56:['🌧️','Freezing drizzle'],
+      57:['🌧️','Freezing drizzle'],
+      61:['🌦️','Light rain'],
+      63:['🌧️','Rain'],
+      65:['🌧️','Heavy rain'],
+      66:['🌧️','Freezing rain'],
+      67:['🌧️','Freezing rain'],
+      71:['🌨️','Light snow'],
+      73:['🌨️','Snow'],
+      75:['❄️','Heavy snow'],
+      77:['❄️','Snow grains'],
+      80:['🌦️','Rain showers'],
+      81:['🌧️','Rain showers'],
+      82:['🌧️','Heavy showers'],
+      85:['🌨️','Snow showers'],
+      86:['❄️','Heavy snow showers'],
+      95:['⛈️','Thunderstorm'],
+      96:['⛈️','Thunderstorm'],
+      99:['⛈️','Thunderstorm']
+    };
+
+    function weatherInfo(code) {
+      return weatherMap[code] || ['☁️','Weather'];
+    }
+
+    function round(v) {
+      return Math.round(Number(v));
+    }
+
+    function updateClock() {
+      var now = new Date();
+      document.getElementById('time').textContent =
+        new Intl.DateTimeFormat('en-GB', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+          timeZone: TZ
+        }).format(now);
+
+      document.getElementById('date').textContent =
+        new Intl.DateTimeFormat('en-GB', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          timeZone: TZ
+        }).format(now);
+    }
+
+    function localHourIso() {
+      var parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: TZ,
+        year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit',
+        hour12:false
+      }).formatToParts(new Date());
+      var o = {};
+      for (var i=0;i<parts.length;i++) o[parts[i].type] = parts[i].value;
+      return o.year + '-' + o.month + '-' + o.day + 'T' + o.hour + ':00';
+    }
+
+    function setDayNight(sunrise, sunset) {
+      try {
+        var now = new Date();
+        var sr = new Date(sunrise);
+        var ss = new Date(sunset);
+        document.body.classList.toggle('day', now >= sr && now < ss);
+      } catch (e) {}
+    }
+
+    function renderForecast(data) {
+      var box = document.getElementById('forecast');
+      box.innerHTML = '';
+
+      var hourly = data.hourly;
+      var startIso = localHourIso();
+      var start = hourly.time.indexOf(startIso);
+      if (start < 0) start = 0;
+
+      for (var n=0; n<6; n++) {
+        var i = start + n;
+        if (i >= hourly.time.length) break;
+
+        var t = new Date(hourly.time[i]);
+        var label = new Intl.DateTimeFormat('en-GB', {
+          hour:'2-digit', minute:'2-digit', hour12:false, timeZone:TZ
+        }).format(t);
+        if (n === 0) label = 'Now';
+
+        var info = weatherInfo(hourly.weather_code[i]);
+        var rain = hourly.precipitation_probability[i];
+
+        var el = document.createElement('div');
+        el.className = 'hour';
+        el.innerHTML =
+          '<div class="hour-time">' + label + '</div>' +
+          '<div class="hour-icon">' + info[0] + '</div>' +
+          '<div class="hour-temp">' + round(hourly.temperature_2m[i]) + '°</div>' +
+          '<div class="rain">Rain ' + (rain == null ? '—' : round(rain) + '%') + '</div>';
+        box.appendChild(el);
+      }
+    }
+
+    function loadWeather() {
+      var url =
+        'https://api.open-meteo.com/v1/forecast' +
+        '?latitude=' + LAT +
+        '&longitude=' + LON +
+        '&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m' +
+        '&hourly=temperature_2m,precipitation_probability,weather_code' +
+        '&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset' +
+        '&temperature_unit=celsius&wind_speed_unit=mph' +
+        '&timezone=' + encodeURIComponent(TZ) +
+        '&forecast_days=2';
+
+      fetch(url, {cache:'no-store'})
+        .then(function(r) {
+          if (!r.ok) throw new Error('Weather service returned ' + r.status);
+          return r.json();
+        })
+        .then(function(data) {
+          var c = data.current;
+          var info = weatherInfo(c.weather_code);
+          document.getElementById('weatherIcon').textContent = info[0];
+          document.getElementById('temp').textContent = round(c.temperature_2m) + '°';
+          document.getElementById('condition').textContent = info[1];
+          document.getElementById('feels').textContent = 'Feels ' + round(c.apparent_temperature) + '°';
+          document.getElementById('wind').textContent = 'Wind ' + round(c.wind_speed_10m) + ' mph';
+          document.getElementById('highlow').textContent =
+            'H ' + round(data.daily.temperature_2m_max[0]) + '° · L ' +
+            round(data.daily.temperature_2m_min[0]) + '°';
+          document.getElementById('weatherError').textContent = '';
+          renderForecast(data);
+          setDayNight(data.daily.sunrise[0], data.daily.sunset[0]);
+          document.getElementById('status').textContent =
+            'Weather updated ' + new Intl.DateTimeFormat('en-GB', {
+              hour:'2-digit', minute:'2-digit', hour12:false, timeZone:TZ
+            }).format(new Date());
+        })
+        .catch(function(err) {
+          document.getElementById('weatherError').textContent =
+            'Weather temporarily unavailable';
+          document.getElementById('status').textContent = String(err.message || err);
+        });
+    }
+
+    // Build a small silent WAV in-browser so no separate media file is required.
+    function makeSilentWav(seconds) {
+      var sampleRate = 8000;
+      var samples = Math.floor(sampleRate * seconds);
+      var buffer = new ArrayBuffer(44 + samples * 2);
+      var view = new DataView(buffer);
+
+      function str(off, s) {
+        for (var i=0; i<s.length; i++) view.setUint8(off+i, s.charCodeAt(i));
+      }
+
+      str(0,'RIFF');
+      view.setUint32(4, 36 + samples * 2, true);
+      str(8,'WAVE');
+      str(12,'fmt ');
+      view.setUint32(16,16,true);
+      view.setUint16(20,1,true);
+      view.setUint16(22,1,true);
+      view.setUint32(24,sampleRate,true);
+      view.setUint32(28,sampleRate*2,true);
+      view.setUint16(32,2,true);
+      view.setUint16(34,16,true);
+      str(36,'data');
+      view.setUint32(40,samples*2,true);
+      return URL.createObjectURL(new Blob([buffer], {type:'audio/wav'}));
+    }
+
+    var audio = document.getElementById('keepAlive');
+    audio.src = makeSilentWav(10);
+
+    function startKeepAlive(fromTap) {
+      var p;
+      try { p = audio.play(); } catch(e) { p = null; }
+      if (p && typeof p.then === 'function') {
+        p.then(function() {
+          document.getElementById('awakePrompt').style.display = 'none';
+        }).catch(function() {
+          if (!fromTap) document.getElementById('awakePrompt').style.display = 'grid';
+        });
+      }
+
+      // Also request the browser Screen Wake Lock where Silk supports it.
+      if (navigator.wakeLock && navigator.wakeLock.request) {
+        navigator.wakeLock.request('screen').catch(function(){});
+      }
+    }
+
+    document.getElementById('awakePrompt').addEventListener('click', function() {
+      startKeepAlive(true);
+    });
+    document.addEventListener('visibilitychange', function() {
+      if (!document.hidden) startKeepAlive(false);
+    });
+
+    updateClock();
+    setInterval(updateClock, 1000);
+    loadWeather();
+    setInterval(loadWeather, 15 * 60 * 1000);
+    setTimeout(function(){ startKeepAlive(false); }, 700);
+  </script>
+</body>
+</html>
