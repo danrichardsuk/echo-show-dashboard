@@ -13,6 +13,7 @@
       --line: rgba(255,255,255,.15);
       --text: #f7f8fb;
       --muted: #c7ccd6;
+      --app-height: 100vh;
     }
     * { box-sizing: border-box; }
     html, body {
@@ -34,13 +35,13 @@
     }
     #app {
       width: 100vw;
-      height: 100vh;
-      min-height: 100%;
-      padding: 28px 38px 24px;
+      height: var(--app-height);
+      min-height: 0;
+      padding: 22px 34px 14px;
       display: grid;
       grid-template-columns: 1.18fr .82fr;
-      grid-template-rows: 1fr 190px;
-      gap: 20px 28px;
+      grid-template-rows: minmax(0, 1fr) 150px;
+      gap: 14px 28px;
       background:
         radial-gradient(circle at 80% 12%, rgba(255,255,255,.07), transparent 28%),
         linear-gradient(145deg, var(--bg2), var(--bg1) 62%);
@@ -183,11 +184,27 @@
       color: var(--muted);
       max-width: 420px;
     }
+    body.compact #app {
+      padding-top: 16px;
+      padding-bottom: 9px;
+      grid-template-rows: minmax(0, 1fr) 126px;
+      gap: 9px 24px;
+    }
+    body.compact .time { font-size: clamp(72px, 10.8vw, 132px); }
+    body.compact .date { margin-top: 11px; font-size: clamp(22px, 2.6vw, 32px); }
+    body.compact .location { margin-top: 6px; font-size: clamp(16px, 1.8vw, 22px); }
+    body.compact .weather-icon { font-size: clamp(48px, 6vw, 72px); }
+    body.compact .temp { font-size: clamp(62px, 8vw, 96px); }
+    body.compact .condition { margin-top: 8px; font-size: clamp(19px, 2.2vw, 27px); }
+    body.compact .details { margin-top: 7px; gap: 14px; font-size: clamp(14px, 1.5vw, 19px); }
+    body.compact .hour { padding: 8px 8px 7px; border-radius: 14px; }
+    body.compact .hour-time { font-size: 16px; }
+    body.compact .hour-icon { font-size: 26px; margin: 2px 0 1px; }
+    body.compact .hour-temp { font-size: 20px; }
+    body.compact .rain { font-size: 13px; }
+
     @media (max-height: 600px) {
-      #app { padding-top: 18px; padding-bottom: 16px; grid-template-rows: 1fr 155px; }
-      .date { margin-top: 12px; }
-      .location { margin-top: 7px; }
-      .hour { padding-top: 9px; padding-bottom: 8px; }
+      #app { padding-top: 14px; padding-bottom: 8px; grid-template-rows: minmax(0, 1fr) 120px; }
     }
   </style>
 </head>
@@ -270,6 +287,32 @@
 
     function round(v) {
       return Math.round(Number(v));
+    }
+
+    function syncVisibleViewport() {
+      var h = window.innerHeight;
+      if (window.visualViewport && window.visualViewport.height) {
+        h = Math.min(h, window.visualViewport.height);
+      }
+      document.documentElement.style.setProperty('--app-height', Math.floor(h) + 'px');
+      document.body.classList.toggle('compact', h < 690);
+    }
+
+    function tryFullscreen() {
+      if (document.fullscreenElement) return;
+      var el = document.documentElement;
+      var fn = el.requestFullscreen || el.webkitRequestFullscreen;
+      if (!fn) return;
+      try {
+        var p = fn.call(el, {navigationUI:'hide'});
+        if (p && typeof p.catch === 'function') {
+          p.catch(function(){
+            try { fn.call(el); } catch(e) {}
+          });
+        }
+      } catch(e) {
+        try { fn.call(el); } catch(e2) {}
+      }
     }
 
     function updateClock() {
@@ -435,11 +478,23 @@
     }
 
     document.getElementById('awakePrompt').addEventListener('click', function() {
+      tryFullscreen();
+      startKeepAlive(true);
+    });
+
+    document.getElementById('app').addEventListener('click', function() {
+      tryFullscreen();
       startKeepAlive(true);
     });
     document.addEventListener('visibilitychange', function() {
       if (!document.hidden) startKeepAlive(false);
     });
+
+    syncVisibleViewport();
+    window.addEventListener('resize', syncVisibleViewport);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', syncVisibleViewport);
+    }
 
     updateClock();
     setInterval(updateClock, 1000);
